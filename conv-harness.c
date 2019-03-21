@@ -58,7 +58,7 @@ void write_out(int16_t *** a, int dim0, int dim1, int dim2)
         printf("%d, ", a[i][j][k]);
       }
       // print end of line
-      printf("%f\n", a[i][j][dim2-1]);
+      printf("%d\n", a[i][j][dim2-1]);
     }
   }
 }
