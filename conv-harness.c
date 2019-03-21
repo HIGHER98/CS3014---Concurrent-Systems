@@ -321,24 +321,41 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 {
   // this call here is just dummy code
   // insert your own code instead
-  int h, w, x, y, c, m;
+
+	int h, w, c, m;
   double sum;
 
-  for ( m = 0; m < nkernels; m++ ) {
-    for ( w = 0; w < width; w++ ) {
-      for ( h = 0; h < height; h++ ) {
-        sum = 0.0;
-        for ( c = 0; c < nchannels; c++ ) {
-          for ( x = 0; x < kernel_order; x++) {
-            for ( y = 0; y < kernel_order; y++ ) {
-              sum += (double) image[w+x][h+y][c] * (double) kernels[m][c][x][y];
-            }
-          }
-          output[m][w][h] = (float) sum;
-        }
-      }
-    }
-  }
+	if(kernel_order == 1){
+		for ( m = 0; m < nkernels; m++ ) {
+			for ( w = 0; w < width; w++ ) {
+				for ( h = 0; h < height; h++ ) {
+					sum = 0.0;
+					for ( c = 0; c < nchannels; c++ ) {
+						sum += (double) image[w][h][c] * (double) kernels[m][c][0][0];
+						output[m][w][h] = (float) sum;
+					}
+				}
+			}
+		}
+	}
+	else{
+		int x, y;
+		for ( m = 0; m < nkernels; m++ ) {
+			for ( w = 0; w < width; w++ ) {
+				for ( h = 0; h < height; h++ ) {
+					sum = 0.0;
+					for ( c = 0; c < nchannels; c++ ) {
+						for ( x = 0; x < kernel_order; x++) {
+							for ( y = 0; y < kernel_order; y++ ) {
+								sum += (double) image[w+x][h+y][c] * (double) kernels[m][c][x][y];
+							}
+						}
+						output[m][w][h] = (float) sum;
+					}
+				}
+			}
+		}
+	}
 }
 
 int main(int argc, char ** argv)
@@ -352,6 +369,7 @@ int main(int argc, char ** argv)
   int16_t **** kernels;
   float *** control_output, *** output;
   long long mul_time;
+	long long greggs_time;
   int width, height, kernel_order, nchannels, nkernels;
   struct timeval start_time;
   struct timeval stop_time;
@@ -387,9 +405,20 @@ int main(int argc, char ** argv)
 
   //DEBUGGING(write_out(A, a_dim1, a_dim2));
 
+
+ /* record starting time of Gregg's code*/
+  gettimeofday(&start_time, NULL);
+
   /* use a simple multichannel convolution routine to produce control result */
   multichannel_conv(image, kernels, control_output, width,
                     height, nchannels, nkernels, kernel_order);
+
+  /* record finishing time */
+  gettimeofday(&stop_time, NULL);
+  greggs_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
+    (stop_time.tv_usec - start_time.tv_usec);
+  printf("Gregg's conv time: %lld microseconds\n", greggs_time);
+
 
   /* record starting time of team's code*/
   gettimeofday(&start_time, NULL);
@@ -404,11 +433,13 @@ int main(int argc, char ** argv)
     (stop_time.tv_usec - start_time.tv_usec);
   printf("Team conv time: %lld microseconds\n", mul_time);
 
+	printf("Speedup: %lf\n", (double)greggs_time/(double)mul_time)
+
   DEBUGGING(write_out(output, nkernels, width, height));
 
   /* now check that the team's multichannel convolution routine
      gives the same answer as the known working version */
   check_result(output, control_output, nkernels, width, height);
-
+	printf("\n"); //For readability
   return 0;
 }
