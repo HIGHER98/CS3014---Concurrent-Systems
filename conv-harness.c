@@ -325,7 +325,10 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 	int h, w, c, m;
   double sum;
 
+  //omp_set_num_threads(numCores);
+
 	if(kernel_order == 1){
+    #pragma omp parallel for private(m,w,h,c) shared(nkernels,width,height,nchannels,sum)
 		for ( m = 0; m < nkernels; m++ ) {
 			for ( w = 0; w < width; w++ ) {
 				for ( h = 0; h < height; h++ ) {
@@ -340,6 +343,7 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 	}
 	else{
 		int x, y;
+    #pragma omp parallel for private(m,w,h,c,x,y) shared(nkernels,width,height,nchannels,kernel_order,sum)
 		for ( m = 0; m < nkernels; m++ ) {
 			for ( w = 0; w < width; w++ ) {
 				for ( h = 0; h < height; h++ ) {
