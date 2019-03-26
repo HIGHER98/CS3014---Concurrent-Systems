@@ -343,6 +343,23 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 	}
 	else{
 		int x, y;
+    int k2 = kernel_order * kernel_order;
+   
+    float*** newImage = new_empty_3d_matrix_float(nchannels,width+kernel_order,height+kernel_order);
+
+    #pragma omp parallel for private(w,h,c) shared(width,height,nchannels,kernel_order)
+    for ( w = 0; w < width+kernel_order; w++ ) {
+      for ( h = 0; h < height+kernel_order; h++ ) {
+        for ( c = 0; c < nchannels; c+=4 ) {
+          newImage[c][w][h] = image[w][h][c];
+          newImage[c+1][w][h] = image[w][h][c+1];
+          newImage[c+2][w][h] = image[w][h][c+2];
+          newImage[c+3][w][h] = image[w][h][c+3];
+        } 
+      }
+    }
+    printf("New Matrix created\n");
+
     #pragma omp parallel for private(m,w,h,c,x,y) shared(nkernels,width,height,nchannels,kernel_order,sum)
 		for ( m = 0; m < nkernels; m++ ) {
 			for ( w = 0; w < width; w++ ) {
@@ -351,7 +368,7 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 					for ( c = 0; c < nchannels; c++ ) {
 						for ( x = 0; x < kernel_order; x++) {
 							for ( y = 0; y < kernel_order; y++ ) {
-								sum += (double) image[w+x][h+y][c] * (double) kernels[m][c][x][y];
+								sum += (double) newImage[c][w+x][h+y] * (double) kernels[m][c][x][y];
 							}
 						}
 						output[m][w][h] = (float) sum;
