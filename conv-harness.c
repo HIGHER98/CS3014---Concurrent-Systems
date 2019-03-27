@@ -393,7 +393,11 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 
     */
 		__m128 result;
-//    #pragma omp parallel for private(m,w,h,c,x,y) shared(nkernels,width,height,nchannels,kernel_order,sum)
+    double sum1;
+    double sum2;
+    double sum3;
+    double sum4;
+    #pragma omp parallel for private(m,w,h,c,x,y) shared(nkernels,width,height,nchannels,kernel_order,sum)
 		for ( m = 0; m < nkernels; m++ ) {
 			for ( w = 0; w < width; w++ ) {
 				for ( h = 0; h < height; h++ ) {
@@ -405,12 +409,15 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 /*Float version*/
   							__m128 imageVal = _mm_load_ps(&image[w+x][h+y][c]);
 								__m128 kernelVal = _mm_load_ps(&kernel2[m][x][y][c]);
-								result = _mm_mul_ps(imageVal, kernelVal);
-								result = _mm_hadd_ps(result, result);
-								result = _mm_hadd_ps(result, result);
+								__m128 result = _mm_mul_ps(imageVal, kernelVal);
+                sum1 = (double)result[0];
+                sum2 = (double)result[1];
+                sum3 = (double)result[2];
+                sum4 = (double)result[3];
+						//		result = _mm_hadd_ps(result, result);
+						//		result = _mm_hadd_ps(result, result);
 /*End float version*/
-
-								sum += result[0];
+								sum += sum1 + sum2 + sum3 + sum4;
 							}
 						}
           }
