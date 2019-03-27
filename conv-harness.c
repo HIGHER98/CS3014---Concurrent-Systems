@@ -404,9 +404,8 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 					sum = 0.0;
           for ( x = 0; x < kernel_order; x++) {
             for ( y = 0; y < kernel_order; y++ ){
-							for ( c = 0; c < nchannels; c+=4 ) {
+							for ( c = 0; c < nchannels; c+=32 ) {
 
-/*Float version*/
   							__m128 imageVal = _mm_load_ps(&image[w+x][h+y][c]);
 								__m128 kernelVal = _mm_load_ps(&kernel2[m][x][y][c]);
 								__m128 result = _mm_mul_ps(imageVal, kernelVal);
@@ -414,10 +413,79 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
                 sum2 = (double)result[1];
                 sum3 = (double)result[2];
                 sum4 = (double)result[3];
-						//		result = _mm_hadd_ps(result, result);
-						//		result = _mm_hadd_ps(result, result);
-/*End float version*/
+
+                sum += sum1 + sum2 + sum3 + sum4;
+
+                imageVal = _mm_load_ps(&image[w+x][h+y][c+4]);
+                kernelVal = _mm_load_ps(&kernel2[m][x][y][c+4]);
+                result = _mm_mul_ps(imageVal,kernelVal);
+                sum1 = (double)result[0];
+                sum2 = (double)result[1];
+                sum3 = (double)result[2];
+                sum4 = (double)result[3];
+
 								sum += sum1 + sum2 + sum3 + sum4;
+
+                imageVal = _mm_load_ps(&image[w+x][h+y][c+8]);
+                kernelVal = _mm_load_ps(&kernel2[m][x][y][c+8]);
+                result = _mm_mul_ps(imageVal,kernelVal);
+                sum1 = (double)result[0];
+                sum2 = (double)result[1];
+                sum3 = (double)result[2];
+                sum4 = (double)result[3];
+
+								sum += sum1 + sum2 + sum3 + sum4;
+
+                imageVal = _mm_load_ps(&image[w+x][h+y][c+12]);
+                kernelVal = _mm_load_ps(&kernel2[m][x][y][c+12]);
+                result = _mm_mul_ps(imageVal,kernelVal);
+                sum1 = (double)result[0];
+                sum2 = (double)result[1];
+                sum3 = (double)result[2];
+                sum4 = (double)result[3];
+
+                sum += sum1 + sum2 + sum3 + sum4;
+
+                imageVal = _mm_load_ps(&image[w+x][h+y][c+16]);
+                kernelVal = _mm_load_ps(&kernel2[m][x][y][c+16]);
+                result = _mm_mul_ps(imageVal,kernelVal);
+                sum1 = (double)result[0];
+                sum2 = (double)result[1];
+                sum3 = (double)result[2];
+                sum4 = (double)result[3];
+
+                sum += sum1 + sum2 + sum3 + sum4;
+
+                imageVal = _mm_load_ps(&image[w+x][h+y][c+20]);
+                kernelVal = _mm_load_ps(&kernel2[m][x][y][c+20]);
+                result = _mm_mul_ps(imageVal,kernelVal);
+                sum1 = (double)result[0];
+                sum2 = (double)result[1];
+                sum3 = (double)result[2];
+                sum4 = (double)result[3];
+
+                sum += sum1 + sum2 + sum3 + sum4;
+
+                imageVal = _mm_load_ps(&image[w+x][h+y][c+24]);
+                kernelVal = _mm_load_ps(&kernel2[m][x][y][c+24]);
+                result = _mm_mul_ps(imageVal,kernelVal);
+                sum1 = (double)result[0];
+                sum2 = (double)result[1];
+                sum3 = (double)result[2];
+                sum4 = (double)result[3];
+
+                sum += sum1 + sum2 + sum3 + sum4;
+
+                imageVal = _mm_load_ps(&image[w+x][h+y][c+28]);
+                kernelVal = _mm_load_ps(&kernel2[m][x][y][c+28]);
+                result = _mm_mul_ps(imageVal,kernelVal);
+                sum1 = (double)result[0];
+                sum2 = (double)result[1];
+                sum3 = (double)result[2];
+                sum4 = (double)result[3];
+
+
+                sum += sum1 + sum2 + sum3 + sum4;
 							}
 						}
           }
