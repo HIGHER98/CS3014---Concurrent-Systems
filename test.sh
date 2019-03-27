@@ -14,7 +14,7 @@ gcc -O3 -msse4 conv-harness.c -fopenmp
 
 #Gregg's conv time: 1581795 microseconds
 #Team conv time: 1000543 microseconds
-./a.out 64 64 3 64 64
+./a.out 256 256 3 128 128
 
 
 #Gregg's conv time: 101978515 microseconds
