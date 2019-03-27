@@ -329,7 +329,7 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
         If the kernel order is 1 we can eliminate 2 for-loops since combined they will run once.
         We are are scraping off a lot of the overhead associated with running for loops by doing this.
 
-        In all cases where there is some parallelism using OMP, the parallelism will only occur if
+        In all cases where there is some parallelisation using OMP, the parallelisation will only occur if
         array is over a specific size. We check this by comparing the size of the arguments to a predefined
         threshold we found we testing the code.
   */
