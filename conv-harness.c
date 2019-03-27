@@ -392,15 +392,25 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
       The execution of the loops this way has better data locality, and runs faster.
 
     */
-    #pragma omp parallel for private(m,w,h,c,x,y) shared(nkernels,width,height,nchannels,kernel_order,sum) if(argProduct > threshold)
+		__m128 result;
+//    #pragma omp parallel for private(m,w,h,c,x,y) shared(nkernels,width,height,nchannels,kernel_order,sum)
 		for ( m = 0; m < nkernels; m++ ) {
 			for ( w = 0; w < width; w++ ) {
 				for ( h = 0; h < height; h++ ) {
 					sum = 0.0;
           for ( x = 0; x < kernel_order; x++) {
             for ( y = 0; y < kernel_order; y++ ){
-					     for ( c = 0; c < nchannels; c++ ) {
-  								sum += (double) image[w+x][h+y][c] * (double) kernel2[m][x][y][c];
+							for ( c = 0; c < nchannels; c+=4 ) {
+
+/*Float version*/
+  							__m128 imageVal = _mm_load_ps(&image[w+x][h+y][c]);
+								__m128 kernelVal = _mm_load_ps(&kernel2[m][x][y][c]);
+								result = _mm_mul_ps(imageVal, kernelVal);
+								result = _mm_hadd_ps(result, result);
+								result = _mm_hadd_ps(result, result);
+/*End float version*/
+
+								sum += result[0];
 							}
 						}
           }
