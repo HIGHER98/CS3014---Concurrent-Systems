@@ -406,6 +406,8 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
             for ( y = 0; y < kernel_order; y++ ){
 							for ( c = 0; c < nchannels; c+=32 ) {
 
+                //SSE Vectorisation
+
   							__m128 imageVal = _mm_load_ps(&image[w+x][h+y][c]);
 								__m128 kernelVal = _mm_load_ps(&kernel2[m][x][y][c]);
 								__m128 result = _mm_mul_ps(imageVal, kernelVal);
