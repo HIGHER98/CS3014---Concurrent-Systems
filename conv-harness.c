@@ -322,10 +322,23 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
   // this call here is just dummy code
   // insert your own code instead
 
-	int h, w, c, m;
+	int h, w, c, m,x,y;
   double sum;
 
   //omp_set_num_threads(numCores);
+
+  float**** kernel2 = new_empty_4d_matrix_float(nkernels,kernel_order,kernel_order,nchannels);
+
+  #pragma omp parallel for private(m,c,x,y) shared(nkernels,nchannels,kernel_order)
+  for( m = 0; m < nkernels; m++){
+    for( c = 0; c < nchannels; c++){
+      for( x = 0; x < kernel_order; x++){
+        for( y = 0; y < kernel_order; y++){
+          kernel2[m][x][y][c] = kernels[m][c][x][y];
+        }
+      }
+    }
+  }
 
 	if(kernel_order == 1){
     #pragma omp parallel for private(m,w,h,c) shared(nkernels,width,height,nchannels,sum)
@@ -334,7 +347,7 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 				for ( h = 0; h < height; h++ ) {
 					sum = 0.0;
 					for ( c = 0; c < nchannels; c++ ) {
-						sum += (double) image[w][h][c] * (double) kernels[m][c][0][0];
+						sum += (double) image[w][h][c] * (double) kernels[m][0][0][c];
 						output[m][w][h] = (float) sum;
 					}
 				}
@@ -342,37 +355,22 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 		}
 	}
 	else{
-		int x, y;
-    int k2 = kernel_order * kernel_order;
-   
-    float*** newImage = new_empty_3d_matrix_float(nchannels,width+kernel_order,height+kernel_order);
 
-    #pragma omp parallel for private(w,h,c) shared(width,height,nchannels,kernel_order)
-    for ( w = 0; w < width+kernel_order; w++ ) {
-      for ( h = 0; h < height+kernel_order; h++ ) {
-        for ( c = 0; c < nchannels; c+=4 ) {
-          newImage[c][w][h] = image[w][h][c];
-          newImage[c+1][w][h] = image[w][h][c+1];
-          newImage[c+2][w][h] = image[w][h][c+2];
-          newImage[c+3][w][h] = image[w][h][c+3];
-        } 
-      }
-    }
-    printf("New Matrix created\n");
+    float*** newImage = new_empty_3d_matrix_float(nchannels,width+kernel_order,height+kernel_order);
 
     #pragma omp parallel for private(m,w,h,c,x,y) shared(nkernels,width,height,nchannels,kernel_order,sum)
 		for ( m = 0; m < nkernels; m++ ) {
 			for ( w = 0; w < width; w++ ) {
 				for ( h = 0; h < height; h++ ) {
 					sum = 0.0;
-					for ( c = 0; c < nchannels; c++ ) {
-						for ( x = 0; x < kernel_order; x++) {
-							for ( y = 0; y < kernel_order; y++ ) {
-								sum += (double) newImage[c][w+x][h+y] * (double) kernels[m][c][x][y];
+          for ( x = 0; x < kernel_order; x++) {
+            for ( y = 0; y < kernel_order; y++ ){
+					     for ( c = 0; c < nchannels; c++ ) {
+  								sum += (double) image[w+x][h+y][c] * (double) kernel2[m][x][y][c];
 							}
 						}
-						output[m][w][h] = (float) sum;
-					}
+          }
+				  output[m][w][h] = (float) sum;
 				}
 			}
 		}
@@ -438,7 +436,7 @@ int main(int argc, char ** argv)
   gettimeofday(&stop_time, NULL);
   greggs_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
     (stop_time.tv_usec - start_time.tv_usec);
-  printf("Gregg's conv time: %lld microseconds\n", greggs_time);
+  //printf("Gregg's conv time: %lld microseconds\n", greggs_time);
 
 
   /* record starting time of team's code*/
@@ -452,7 +450,7 @@ int main(int argc, char ** argv)
   gettimeofday(&stop_time, NULL);
   mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
     (stop_time.tv_usec - start_time.tv_usec);
-  printf("Team conv time: %lld microseconds\n", mul_time);
+  //printf("Team conv time: %lld microseconds\n", mul_time);
 
 	printf("Speedup: %lf\n", (double)greggs_time/(double)mul_time)
 
