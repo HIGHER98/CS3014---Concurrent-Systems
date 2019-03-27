@@ -1,4 +1,4 @@
-/* Test and timing harness program for developing a multichannel
+  /* Test and timing harness program for developing a multichannel
    multikernel convolution (as used in deep learning networks)
 
    Note there are some simplifications around this implementation,
@@ -35,6 +35,7 @@
 #include <assert.h>
 #include <omp.h>
 #include <math.h>
+#include <x86intrin.h>
 #include <stdint.h>
 
 /* the following two definitions of DEBUGGING control whether or not
@@ -43,7 +44,6 @@
 /*#define DEBUGGING(_x) _x */
 /* to stop the printing of debugging information, use the following line: */
 #define DEBUGGING(_x)
-int numCores;
 
 
 /* write 3d matrix to stdout */
@@ -319,46 +319,80 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
                int width, int height, int nchannels, int nkernels,
                int kernel_order)
 {
-  // this call here is just dummy code
-  // insert your own code instead
 
-	int h, w, c, m,x,y;
+	int h,w,c,m,x,y;
+  int argProduct = nkernels * height * width * nchannels; //Product of all the arguments sans kernel_order
+  int threshold = 120000; // when four of the args are 32 the argproduct ~= 100000, we just added extra padding
   double sum;
 
-  //omp_set_num_threads(numCores);
+  /*
+        If the kernel order is 1 we can eliminate 2 for-loops since combined they will run once.
+        We are are scraping off a lot of the overhead associated with running for loops by doing this.
 
-  float**** kernel2 = new_empty_4d_matrix_float(nkernels,kernel_order,kernel_order,nchannels);
+        In all cases where there is some parallelisation using OMP, the parallelisation will only occur if
+        array is over a specific size. We check this by comparing the size of the arguments to a predefined
+        threshold we found we testing the code.
+  */
+	if(kernel_order == 1){
 
-  #pragma omp parallel for private(m,c,x,y) shared(nkernels,nchannels,kernel_order)
-  for( m = 0; m < nkernels; m++){
-    for( c = 0; c < nchannels; c++){
-      for( x = 0; x < kernel_order; x++){
-        for( y = 0; y < kernel_order; y++){
-          kernel2[m][x][y][c] = kernels[m][c][x][y];
+  /*
+        This block of for-loops creates a new cache-friendly 4D array.
+        In this version elements located in m and c are much closer in memory, leading to less cache misses.
+        This new kernel array is also optimised for use when the kernel order is 1.
+  */
+    float**** kernel2 = new_empty_4d_matrix_float(kernel_order,kernel_order,nkernels,nchannels);
+    #pragma omp parallel for private(m,c,x,y) shared(nkernels,nchannels,kernel_order) if(argProduct > threshold)
+    for( m = 0; m < nkernels; m++){
+      for( c = 0; c < nchannels; c++){
+        for( x = 0; x < kernel_order; x++){
+          for( y = 0; y < kernel_order; y++){
+            kernel2[x][y][m][c] = kernels[m][c][x][y];
+          }
         }
       }
     }
-  }
-
-	if(kernel_order == 1){
-    #pragma omp parallel for private(m,w,h,c) shared(nkernels,width,height,nchannels,sum)
+   /*
+      This loop body is pretty identical to the one featured in multichannel_conv function
+      The major differences are that it is parallelised through omp and the 2 innermost loops have been removed
+   */
+    #pragma omp parallel for private(m,w,h,c) shared(nkernels,width,height,nchannels,sum) if(argProduct > threshold)
 		for ( m = 0; m < nkernels; m++ ) {
 			for ( w = 0; w < width; w++ ) {
 				for ( h = 0; h < height; h++ ) {
 					sum = 0.0;
 					for ( c = 0; c < nchannels; c++ ) {
-						sum += (double) image[w][h][c] * (double) kernels[m][0][0][c];
+						sum += (double) image[w][h][c] * (double) kernel2[0][0][m][c];
 						output[m][w][h] = (float) sum;
 					}
 				}
 			}
 		}
 	}
+  /*
+    When the kernel_order is not 1 this code executes.
+    Another cache-friendly kernel array is created. This array being specific
+    for this block of code.
+  */
 	else{
+    float**** kernel2 = new_empty_4d_matrix_float(nkernels,kernel_order,kernel_order,nchannels);
+    #pragma omp parallel for private(m,c,x,y) shared(nkernels,nchannels,kernel_order) if(argProduct > threshold)
+    for( m = 0; m < nkernels; m++){
+      for( c = 0; c < nchannels; c++){
+        for( x = 0; x < kernel_order; x++){
+          for( y = 0; y < kernel_order; y++){
+            kernel2[m][x][y][c] = kernels[m][c][x][y];
+          }
+        }
+      }
+    }
 
-    float*** newImage = new_empty_3d_matrix_float(nchannels,width+kernel_order,height+kernel_order);
+    /*
+      The main changes here are the ordering in which the innermost loops are excuted.
+      The loop which would iterate through the channels is now the innermost loop.
+      The execution of the loops this way has better data locality, and runs faster.
 
-    #pragma omp parallel for private(m,w,h,c,x,y) shared(nkernels,width,height,nchannels,kernel_order,sum)
+    */
+    #pragma omp parallel for private(m,w,h,c,x,y) shared(nkernels,width,height,nchannels,kernel_order,sum) if(argProduct > threshold)
 		for ( m = 0; m < nkernels; m++ ) {
 			for ( w = 0; w < width; w++ ) {
 				for ( h = 0; h < height; h++ ) {
@@ -382,7 +416,6 @@ int main(int argc, char ** argv)
   //float image[W][H][C];
   //float kernels[M][C][K][K];
   //float output[M][W][H];
-  numCores = omp_get_num_procs();
 
   float *** image;
   int16_t **** kernels;
