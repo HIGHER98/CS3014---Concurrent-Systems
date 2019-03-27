@@ -1,4 +1,4 @@
-/* Test and timing harness program for developing a multichannel
+  /* Test and timing harness program for developing a multichannel
    multikernel convolution (as used in deep learning networks)
 
    Note there are some simplifications around this implementation,
@@ -327,14 +327,14 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 
   /*
         If the kernel order is 1 we can eliminate 2 for-loops since combined they will run once.
-        We are are scraping off a lot of the overhead associated with running for loops by doing this.  
+        We are are scraping off a lot of the overhead associated with running for loops by doing this.
 
-        In all cases where there is some vectorisation using OMP, the vectorisation will only occur if 
+        In all cases where there is some parallelism using OMP, the parallelism will only occur if
         array is over a specific size. We check this by comparing the size of the arguments to a predefined
-        threshold we found we testing the code. 
+        threshold we found we testing the code.
   */
 	if(kernel_order == 1){
-    
+
   /*
         This block of for-loops creates a new cache-friendly 4D array.
         In this version elements located in m and c are much closer in memory, leading to less cache misses.
@@ -353,7 +353,7 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
     }
    /*
       This loop body is pretty identical to the one featured in multichannel_conv function
-      The major differences are that it is vectorised through omp and the 2 innermost loops have been removed
+      The major differences are that it is parallelised through omp and the 2 innermost loops have been removed
    */
     #pragma omp parallel for private(m,w,h,c) shared(nkernels,width,height,nchannels,sum) if(argProduct > threshold)
 		for ( m = 0; m < nkernels; m++ ) {
@@ -368,7 +368,7 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 			}
 		}
 	}
-  /*   
+  /*
     When the kernel_order is not 1 this code executes.
     Another cache-friendly kernel array is created. This array being specific
     for this block of code.
