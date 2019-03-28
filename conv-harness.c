@@ -381,6 +381,7 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
         for( x = 0; x < kernel_order; x++){
           for( y = 0; y < kernel_order; y++){
             kernel2[m][x][y][c] = kernels[m][c][x][y];
+            
           }
         }
       }
@@ -408,7 +409,7 @@ void team_conv(float *** image, int16_t **** kernels, float *** output,
 
                 //SSE Vectorisation
 
-  							__m128 imageVal = _mm_load_ps(&image[w+x][h+y][c]);
+                                __m128 imageVal = _mm_load_ps(&image[w+x][h+y][c]);
 								__m128 kernelVal = _mm_load_ps(&kernel2[m][x][y][c]);
 								__m128 result = _mm_mul_ps(imageVal, kernelVal);
                 sum1 = (double)result[0];
@@ -556,7 +557,8 @@ int main(int argc, char ** argv)
   gettimeofday(&stop_time, NULL);
   greggs_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
     (stop_time.tv_usec - start_time.tv_usec);
-  //printf("Gregg's conv time: %lld microseconds\n", greggs_time);
+  printf("Original conv time: %lld microseconds\n", greggs_time);
+  
 
 
   /* record starting time of team's code*/
@@ -570,15 +572,15 @@ int main(int argc, char ** argv)
   gettimeofday(&stop_time, NULL);
   mul_time = (stop_time.tv_sec - start_time.tv_sec) * 1000000L +
     (stop_time.tv_usec - start_time.tv_usec);
-  //printf("Team conv time: %lld microseconds\n", mul_time);
+  printf("Team conv time: %lld microseconds\n", mul_time);
 
-	printf("Speedup: %lf\n", (double)greggs_time/(double)mul_time)
+  printf("Speedup: %lf\n", (double)greggs_time/(double)mul_time)
 
   DEBUGGING(write_out(output, nkernels, width, height));
 
   /* now check that the team's multichannel convolution routine
      gives the same answer as the known working version */
   check_result(output, control_output, nkernels, width, height);
-	printf("\n"); //For readability
+  printf("\n"); //For readability
   return 0;
 }
